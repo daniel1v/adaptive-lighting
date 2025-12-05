@@ -3,11 +3,11 @@ name: Update README.md, strings.json, and services.yaml
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - "README.md"
       - "custom_components/adaptive_lighting/const.py"
-      - "github/workflows/update-readme.yml"
+      - ".github/workflows/update-readme.yml"
   pull_request:
 
 jobs:
@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Home Assistant
         uses: ./.github/workflows/install_dependencies
         with:
-          python-version: "3.12"
+          python-version: "3.13"
 
       - name: Install markdown-code-runner and README code dependencies
         run: |

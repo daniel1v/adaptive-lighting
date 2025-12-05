@@ -7,12 +7,12 @@
 # Optionally build the image yourself with:
 # docker build -t basnijholt/adaptive-lighting:latest .
 
-FROM python:3.13-bookworm
+FROM ghcr.io/astral-sh/uv:debian
 
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    git \
-    build-essential libssl-dev libffi-dev python3-dev \
+# Install build dependencies for Python extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3-dev \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Clone home-assistant/core
@@ -25,9 +25,12 @@ COPY . /app/
 RUN ln -s /core /app/core && /app/scripts/setup-symlinks
 
 # Install home-assistant/core dependencies
+RUN mkdir -p /.venv
+ENV UV_PROJECT_ENVIRONMENT=/.venv UV_PYTHON=3.13 PATH="/.venv/bin:$PATH"
+RUN uv venv
 RUN /app/scripts/setup-dependencies
 
-WORKDIR /core
+WORKDIR /app/core
 
 # Make 'custom_components/adaptive_lighting' imports available to tests
 ENV PYTHONPATH="${PYTHONPATH}:/app"
