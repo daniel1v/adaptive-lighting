@@ -323,7 +323,7 @@ def _kw(input):
         "min_sunset_time": None,
         "max_sunset_time": None,
         "astral_observer": Observer(),
-        "timezone": dt.timezone.utc,
+        "timezone": dt.UTC,
     }
 
 

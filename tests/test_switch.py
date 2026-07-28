@@ -2287,6 +2287,13 @@ def test_lerp_color_hsv():
         lerp_color_hsv((255, 0, 0), (0, 255, 0), 1.1)
 
 
+@pytest.mark.skip(
+    reason=(
+        "Fork-local: `_is_light_group` always returns False (see switch.py) so "
+        "group expansion is disabled for Lightener compatibility; this test "
+        "asserts on upstream's group-expansion behavior."
+    ),
+)
 @pytest.mark.parametrize("proactive_service_call_adaptation", [True, False])
 @pytest.mark.parametrize("take_over_control", [True, False])
 @pytest.mark.parametrize("multi_light_intercept", [True, False])
@@ -2451,6 +2458,13 @@ def _turn_on_service_event(entity_ids: list[str], ts: float, context: Context) -
     )
 
 
+@pytest.mark.skip(
+    reason=(
+        "Fork-local: `_is_light_group` always returns False (see switch.py) so "
+        "group expansion is disabled for Lightener compatibility; this test "
+        "asserts on upstream's group-expansion behavior."
+    ),
+)
 async def test_just_turned_off_group_context_reuse(hass, cleanup):
     """Group 'off' → 'on' with a reused 'turn_off' context must still adapt.
 
@@ -2564,6 +2578,13 @@ async def test_just_turned_off_same_automation_context(hass, cleanup):
     assert await manager.just_turned_off(ENTITY_LIGHT_1)
 
 
+@pytest.mark.skip(
+    reason=(
+        "Fork-local: `_is_light_group` always returns False (see switch.py) so "
+        "group expansion is disabled for Lightener compatibility; this test "
+        "asserts on upstream's group-expansion behavior."
+    ),
+)
 async def test_just_turned_off_group_context_reuse_end_to_end(hass, cleanup):
     """Drive the issue #1378 scenario through the real event bus listeners.
 

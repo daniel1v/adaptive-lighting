@@ -618,12 +618,22 @@ def _expand_light_groups(
     return sorted(all_lights)
 
 
-def _is_light_group(state: State) -> bool:
+def _is_light_group(state: State) -> bool:  # noqa: ARG001
+    # Fork-local change: group expansion is deliberately disabled so that
+    # Lightener works correctly. Lightener's virtual lights expose an
+    # `entity_id` attribute just like a light group, so expanding them would
+    # make Adaptive Lighting address the member lights directly and bypass
+    # Lightener's own brightness mapping. Returning False keeps the virtual
+    # light itself as the adaptation target.
+    #
+    # Do not "restore" the upstream implementation when merging upstream.
+    # Should be made configurable in the UI instead.
+    #
+    # Previous implementation, kept for reference:
     # return "entity_id" in state.attributes and not state.attributes.get(
     #     "is_hue_group",
     #     False,
-    # )
-    # do not expand light groups anymore. TODO: make configurable in UI
+    # )  # noqa: ERA001
     return False
 
 
@@ -2965,7 +2975,7 @@ class AdaptiveLightingManager:
 
 
 class _AsyncSingleShotTimer:
-    def __init__(self, delay: float, callback: Callable[[], None | Any]) -> None:
+    def __init__(self, delay: float, callback: Callable[[], Any | None]) -> None:
         """Initialize the timer."""
         self.delay = delay
         self.callback = callback

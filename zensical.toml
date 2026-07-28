@@ -79,7 +79,9 @@ text = "Inter"
 code = "JetBrains Mono"
 
 [project.theme.icon]
-repo = "lucide/github"
+# NOTE: not "lucide/github" - newer lucide releases (bundled since zensical
+# 0.0.4x) dropped brand icons, which breaks the build with "template not found".
+repo = "fontawesome/brands/github"
 
 [project.extra]
 generator = false

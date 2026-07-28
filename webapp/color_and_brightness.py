@@ -21,8 +21,12 @@ from homeassistant_util_color import (
 )
 
 
-class SunEvent(str, Enum):
+class SunEvent(str, Enum):  # noqa: UP042
     """A set of sun events that happen during a day."""
+
+    # Kept as `(str, Enum)` for now: migrating to `enum.StrEnum` changes
+    # `str()` of a member from "SunEvent.SUNRISE" to "sunrise", so it needs a
+    # full test run before switching.
 
     # Same as homeassistant.const.SUN_EVENT_SUNRISE and homeassistant.const.SUN_EVENT_SUNSET
     # We re-define them here to not depend on homeassistant in this file.
