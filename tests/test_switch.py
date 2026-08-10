@@ -2287,13 +2287,6 @@ def test_lerp_color_hsv():
         lerp_color_hsv((255, 0, 0), (0, 255, 0), 1.1)
 
 
-@pytest.mark.skip(
-    reason=(
-        "Fork-local: `_is_light_group` always returns False (see switch.py) so "
-        "group expansion is disabled for Lightener compatibility; this test "
-        "asserts on upstream's group-expansion behavior."
-    ),
-)
 @pytest.mark.parametrize("proactive_service_call_adaptation", [True, False])
 @pytest.mark.parametrize("take_over_control", [True, False])
 @pytest.mark.parametrize("multi_light_intercept", [True, False])
@@ -2436,6 +2429,47 @@ async def test_light_group(
         assert len(events) == 3
 
 
+async def test_lightener_light_not_expanded(hass, cleanup):
+    """Lightener virtual lights must never be expanded into their members.
+
+    Lightener (https://github.com/fredck/lightener) builds its virtual lights
+    on top of Home Assistant's light-group platform, so they expose the same
+    `entity_id` attribute a regular light group does. Unlike a regular group,
+    though, expanding it would bypass Lightener's own brightness mapping, so
+    it must stay the adaptation target. Detection is based on the entity
+    registry's `platform`, not on any state attribute, since Lightener's
+    entities are otherwise indistinguishable from a plain light group.
+    """
+    lights = await setup_lights(hass, with_group=False)
+    entity_ids = [light.entity_id for light in lights]
+
+    lightener_entity_id = "light.lightener_light"
+    entity_registry.async_get(hass).async_get_or_create(
+        LIGHT_DOMAIN,
+        "lightener",
+        "lightener_unique_id",
+        suggested_object_id="lightener_light",
+    )
+    hass.states.async_set(
+        lightener_entity_id,
+        STATE_ON,
+        {ATTR_ENTITY_ID: entity_ids[:2]},
+    )
+    await hass.async_block_till_done()
+
+    _, switch = await setup_switch(
+        hass,
+        {CONF_LIGHTS: [lightener_entity_id, entity_ids[2]]},
+    )
+    await hass.async_block_till_done()
+
+    # The Lightener light itself remains the adaptation target...
+    assert lightener_entity_id in switch.lights
+    # ...and its members must not be pulled in.
+    assert entity_ids[0] not in switch.lights
+    assert entity_ids[1] not in switch.lights
+
+
 def _state_changed_event(entity_id: str, ts: float, context: Context) -> Event:
     return Event(
         EVENT_STATE_CHANGED,
@@ -2458,13 +2492,6 @@ def _turn_on_service_event(entity_ids: list[str], ts: float, context: Context) -
     )
 
 
-@pytest.mark.skip(
-    reason=(
-        "Fork-local: `_is_light_group` always returns False (see switch.py) so "
-        "group expansion is disabled for Lightener compatibility; this test "
-        "asserts on upstream's group-expansion behavior."
-    ),
-)
 async def test_just_turned_off_group_context_reuse(hass, cleanup):
     """Group 'off' → 'on' with a reused 'turn_off' context must still adapt.
 
@@ -2578,13 +2605,6 @@ async def test_just_turned_off_same_automation_context(hass, cleanup):
     assert await manager.just_turned_off(ENTITY_LIGHT_1)
 
 
-@pytest.mark.skip(
-    reason=(
-        "Fork-local: `_is_light_group` always returns False (see switch.py) so "
-        "group expansion is disabled for Lightener compatibility; this test "
-        "asserts on upstream's group-expansion behavior."
-    ),
-)
 async def test_just_turned_off_group_context_reuse_end_to_end(hass, cleanup):
     """Drive the issue #1378 scenario through the real event bus listeners.
 

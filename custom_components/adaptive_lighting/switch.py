@@ -597,6 +597,18 @@ def _is_state_event(
     )
 
 
+# Fork-local: integrations whose entities look like a light group (they expose
+# the same `entity_id` attribute listing their members) but must never be
+# expanded, because the integration itself performs a non-trivial mapping
+# between the virtual light and its members that expansion would bypass.
+_NON_EXPANDABLE_GROUP_PLATFORMS = {
+    # https://github.com/fredck/lightener - remaps brightness levels between
+    # the virtual light and its members, so expanding it would make Adaptive
+    # Lighting address the members directly and bypass that mapping.
+    "lightener",
+}
+
+
 def _expand_light_groups(
     hass: HomeAssistant,
     lights: list[str],
@@ -608,7 +620,7 @@ def _expand_light_groups(
         if state is None:
             _LOGGER.debug("State of %s is None", light)
             all_lights.add(light)
-        elif _is_light_group(state):
+        elif _is_light_group(hass, state):
             group = state.attributes["entity_id"]
             manager.lights.discard(light)
             all_lights.update(group)
@@ -618,23 +630,14 @@ def _expand_light_groups(
     return sorted(all_lights)
 
 
-def _is_light_group(state: State) -> bool:  # noqa: ARG001
-    # Fork-local change: group expansion is deliberately disabled so that
-    # Lightener works correctly. Lightener's virtual lights expose an
-    # `entity_id` attribute just like a light group, so expanding them would
-    # make Adaptive Lighting address the member lights directly and bypass
-    # Lightener's own brightness mapping. Returning False keeps the virtual
-    # light itself as the adaptation target.
-    #
-    # Do not "restore" the upstream implementation when merging upstream.
-    # Should be made configurable in the UI instead.
-    #
-    # Previous implementation, kept for reference:
-    # return "entity_id" in state.attributes and not state.attributes.get(
-    #     "is_hue_group",
-    #     False,
-    # )  # noqa: ERA001
-    return False
+def _is_light_group(hass: HomeAssistant, state: State) -> bool:
+    if "entity_id" not in state.attributes or state.attributes.get(
+        "is_hue_group",
+        False,
+    ):
+        return False
+    entry = entity_registry.async_get(hass).async_get(state.entity_id)
+    return entry is None or entry.platform not in _NON_EXPANDABLE_GROUP_PLATFORMS
 
 
 def _supported_features(hass: HomeAssistant, light: str) -> set[str]:
@@ -1873,7 +1876,10 @@ class AdaptiveLightingManager:
                     not switch.is_on
                     or not switch._intercept
                     # Never adapt on light groups, because HA will make a separate light.turn_on
-                    or ((e := self.hass.states.get(entity_id)) and _is_light_group(e))
+                    or (
+                        (e := self.hass.states.get(entity_id))
+                        and _is_light_group(self.hass, e)
+                    )
                     # Prevent adaptation of TURN_ON calls when light is already on,
                     # and of TOGGLE calls when toggling off.
                     or self.hass.states.is_state(entity_id, STATE_ON)
@@ -2774,7 +2780,7 @@ class AdaptiveLightingManager:
         See https://github.com/basnijholt/adaptive-lighting/issues/1378
         """
         state = self.hass.states.get(entity_id)
-        if state is None or not _is_light_group(state):
+        if state is None or not _is_light_group(self.hass, state):
             return False
         members: list[str] = state.attributes[ATTR_ENTITY_ID]
         for member in members:
